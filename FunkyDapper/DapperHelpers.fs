@@ -1,4 +1,4 @@
-﻿namespace FuncDapper
+﻿namespace FunkyDapper
 open System
 open Microsoft.Data.SqlClient
 
@@ -39,6 +39,10 @@ module Connection =
             |> Connection
             |> Ok
 
+//=====================================================
+// Query Helpers
+//=====================================================
+
 /// Simple wrapper around sql text
 type SqlText = private SqlText of string
 
@@ -57,9 +61,13 @@ module SqlText =
 /// Simple wrapper around paramter names 
 type ParameterName = private ParameterName of string
 
+/// Helpers for wrking with a parameter name
 module ParameterName =
+
+    /// Gets the value of a parameter
     let internal value (ParameterName str) = str
 
+    /// Creates a new parameter
     let internal create (str) =
         if str |> String.IsNullOrWhiteSpace
         then "Sql parameter cannot be null."
@@ -69,25 +77,15 @@ module ParameterName =
             |> ParameterName
             |> Ok
 
+/// Groups the query text to a set of parameters
 type ParamertizedSql = private {
     Query:SqlText
     Parameters: (ParameterName * obj) list
 }
 
+/// Helpers for wroking with ParameteizedSql
 module ParamertizedSql =
     /// Creates a simple parameterized query.
-    ///
-    /// Validation:
-    ///
-    /// # Insures the query is valid SqlText
-    ///
-    /// # Insures the parameters are valid
-    ///
-    /// # Insures that the query does not contain
-    /// parameters that are not listed
-    ///
-    /// # Insures that the parameters listed are
-    /// all used in the query
     let internal create query parameters =
         result{
             let! sqlText = query |> SqlText.create
@@ -100,6 +98,7 @@ module ParamertizedSql =
 
             return! 
                 if parameters |> List.exists(fun (name,_) -> query.Contains(sprintf "@%s" name))
+
                 then { Query = sqlText; Parameters = prms;}|> Ok
                 else
                     "Insure that all parameters are used at least once in the provided sql."
@@ -145,17 +144,29 @@ module Sql =
             let (query, prms) = ParamertizedSql.value sql
             (query,prms,Data.CommandType.StoredProcedure|> Nullable)
 
-type GridReader = private Reader of Dapper.SqlMapper.GridReader
+//=====================================================
+// Grid Reader
+//=====================================================
 
+/// Wraps GridReader from dapper for multi result query helpers
+type GridReader = private GridReader of Dapper.SqlMapper.GridReader
+
+/// Simple helpers for working with grid readers
 module GridReader =
-    let internal value (Reader rd) = rd
+    
+    /// Unwraps the grid reader to expose dappers grid reader
+    let internal value (GridReader rd) = rd
 
+    /// Reads data from the grid reader into a tuple 
+    /// of lists for the respective types.
     let readTuple<'T1,'T2> reader =
         use gr = reader |> value
         let r1 = gr.Read<'T1>()|> List.ofSeq
         let r2 = gr.Read<'T2>()|> List.ofSeq
         (r1,r2)
 
+    /// Reads data from the grid reader into a tuple 
+    /// of lists for the respective types.
     let readTriple<'T1, 'T2, 'T3> reader =
         use gr = reader |> value
         let r1 = gr.Read<'T1>()|> List.ofSeq
@@ -163,6 +174,8 @@ module GridReader =
         let r3 = gr.Read<'T3>()|> List.ofSeq
         (r1,r2, r3)
 
+    /// Reads data from the grid reader into a tuple 
+    /// of lists for the respective types.
     let readQuad<'T1, 'T2, 'T3, 'T4> reader =
         use gr = reader |> value
         let r1 = gr.Read<'T1>()|> List.ofSeq
@@ -171,7 +184,11 @@ module GridReader =
         let r4 = gr.Read<'T4>()|> List.ofSeq
         (r1,r2, r3, r4)
 
-        
+//=====================================================
+// Grid Reader
+//=====================================================
+  
+ /// Dapper helper methods
 module DapperHelpers =
     let private dapperHelper connection sql command =
         async {
@@ -200,7 +217,7 @@ module DapperHelpers =
                 Dapper.SqlMapper.QueryMultipleAsync(conn, text, prms, commandType = queryType) 
             let! result = dapperHelper connection sql query
             return result 
-            |> Result.map(fun r -> reader(r|> Reader))
+            |> Result.map(fun r -> reader(r|> GridReader))
         }
 
     let execute connection sql =

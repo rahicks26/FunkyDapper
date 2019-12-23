@@ -1,6 +1,6 @@
-﻿namespace FuncDapper.Factories
+﻿namespace FunkyDapper.Factories
 
-open FuncDapper
+open FunkyDapper
 
 type IConnectionFactory =
     abstract member fromConnectionString: string -> Result<Connection,FuncDapperError>
