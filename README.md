@@ -1,0 +1,3 @@
+# FunkyDapper
+A simple wrapper around Dapper to make it easier to consume in F#
+# TODO.... 
