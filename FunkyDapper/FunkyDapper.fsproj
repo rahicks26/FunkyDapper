@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <Compile Include="Result.fs" />
+    <Compile Include="Types.fs" />
     <Compile Include="DapperHelpers.fs" />
     <Compile Include="DIFactories.fs" />
   </ItemGroup>
